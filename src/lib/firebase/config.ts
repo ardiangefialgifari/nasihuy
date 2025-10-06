@@ -1,10 +1,10 @@
-// firebase/clientApp.js (Ganti nama file jika perlu)
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getDatabase } from 'firebase/database';
+// firebase/config.ts
 
-// 1. Pastikan Anda hanya membaca variabel ENV yang diperlukan,
-//    agar kode lebih rapi.
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import { getAuth, Auth } from 'firebase/auth';
+import { getDatabase, Database } from 'firebase/database';
+
+// 1. Tentukan interface untuk memastikan konfigurasi yang valid
 const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -13,16 +13,30 @@ const firebaseConfig = {
     storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
     messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-    // measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID, // Opsional, jika tidak dipakai
+    // measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID, 
 };
 
-// 2. Gunakan pengecekan yang sudah ada, ini sudah benar.
-//    Ini memastikan aplikasi diinisialisasi sekali saja.
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+// 2. Terapkan Logika Pencegahan Inisialisasi pada Server Build
+// Jika API Key tidak ada (terjadi saat build server), jangan inisialisasi.
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+let db: Database | null = null;
 
-// 3. Ambil layanan Firebase dari aplikasi yang sudah diinisialisasi
-const auth = getAuth(app);
-const db = getDatabase(app);
+// Pastikan konfigurasi dasar (API Key dan Project ID) tersedia
+if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+    
+    // Inisialisasi atau ambil aplikasi yang sudah ada
+    app = !getApps().length 
+        ? initializeApp(firebaseConfig) 
+        : getApp();
 
-// 4. Ekspor layanan
+    // Ambil layanan dari aplikasi yang sudah diinisialisasi
+    auth = getAuth(app);
+    db = getDatabase(app);
+} else {
+    // 💡 Pesan error ini akan muncul di log build jika ENV tidak terpasang
+    console.error("FIREBASE ERROR: Missing NEXT_PUBLIC_FIREBASE environment variables. Check .env.local and Netlify/GitHub Secrets.");
+}
+
+// 3. Ekspor layanan (dapat bernilai null jika inisialisasi gagal)
 export { app, auth, db };
